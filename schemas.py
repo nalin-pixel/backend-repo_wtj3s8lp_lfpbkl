@@ -1,48 +1,50 @@
 """
-Database Schemas
+Database Schemas for OneLead CRM
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model represents a MongoDB collection. The collection name is the
+lowercase of the class name (e.g., Lead -> "lead").
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional, Literal
+from datetime import datetime
 
-# Example schemas (replace with your own):
+# -----------------------------
+# Core CRM Schemas
+# -----------------------------
 
-class User(BaseModel):
+class Lead(BaseModel):
     """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
+    Leads collection schema
+    Collection: "lead"
     """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    first_name: str = Field(..., description="Lead first name")
+    last_name: str = Field(..., description="Lead last name")
+    email: Optional[EmailStr] = Field(None, description="Primary email")
+    phone: Optional[str] = Field(None, description="Primary phone number")
+    company: Optional[str] = Field(None, description="Company name")
+    source: Optional[str] = Field("Manual", description="Lead source")
+    status: Literal["new", "contacted", "qualified", "lost", "customer"] = Field(
+        "new", description="Sales status"
+    )
+    owner: Optional[str] = Field(None, description="Owner/user id or name")
+    notes: Optional[str] = Field(None, description="Free text notes")
 
-class Product(BaseModel):
+class Activity(BaseModel):
     """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
+    Activities linked to a lead
+    Collection: "activity"
     """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+    lead_id: str = Field(..., description="Related lead _id as string")
+    type: Literal["call", "email", "meeting", "note", "task"] = Field(
+        "note", description="Activity type"
+    )
+    content: str = Field(..., description="Activity content/summary")
+    scheduled_for: Optional[datetime] = Field(None, description="When it is scheduled")
+    done: bool = Field(False, description="Whether completed")
+    owner: Optional[str] = Field(None, description="Owner/user id or name")
 
-# Add your own schemas here:
-# --------------------------------------------------
-
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+# Optionally define a simple Pipeline model if needed later
+class PipelineStage(BaseModel):
+    name: str = Field(...)
+    order: int = Field(..., ge=0)
